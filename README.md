@@ -24,11 +24,7 @@ Compare the sentiment values (positive words, negative words, sentiment scores, 
 Discuss any differences in sentiment ratios and possible conclusions about the reviews 25 26 27 28 29 30 31 32 33 34 35 36.
 
 The text mining process involves the following steps- 
-Analyze 
-Text  
-Data - Word 
-Frequency - Word  Cloud - Sentiment 
-Analysis  
+
  The very first process involves collecting unstructured data. These can be from sources 
 such as emails, websites, pdf, product reviews, audios, videos, and blogs. Read data and 
 create data structure "corpus". 
