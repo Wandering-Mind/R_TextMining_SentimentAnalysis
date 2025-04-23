@@ -1,0 +1,301 @@
+---
+title: "INFS 691 - Homework8 - Part1"
+subtitle: Text Mining and Sentiment Analysis
+author: "Rose Dunderdale"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+Read the document "Homework8 Instructions.docx" for detailed 
+information about Homework 8 that has three parts.
+
+In "Homework8.Part1", you will carry out text mining and sentiment 
+analysis for the text data "GuderLUC.txt". This text data contains
+the actual teacher/course evaluations for the courses that I taught 
+at Loyola University of Chicago (LUC) in the last 3 years. You need
+to perform all steps of text mining as was done in the example problem 
+presented in the reading document and in the videos.
+```{r}
+install.packages("tm")        
+install.packages("dplyr")     
+install.packages("stringr")   
+
+install.packages("wordcloud")  
+install.packages("wordcloud2") 
+install.packages("syuzhet")   
+install.packages("tidytext")   
+
+library(tm)  # major package for text mining           
+library(dplyr) # data manipulation          
+library(stringr) # for string-split          
+library(wordcloud)  # wordcloud generator          
+library(wordcloud2) # wordcloud2 generator    
+library(syuzhet) # sentiment lexicons             
+library(tidytext) # manipulation, sentiment            
+```
+
+### Text Mining and Sentiment Analysis Process
+#### Step 1. Read Data and Create Corpus 
+#### Step 2. Clean Data 
+#### Step 3. Create Term Document Matrix (tdm)
+#### Step 4. Analyze Data
+####        (word frequency and Sentiment Analysis)
+
+
+#### Step 1. Read Text Data and Create Corpus
+(a) Read the text data 
+Text data "GuderLUC691.txt" contains the actual teacher/course evaluations for the course (INFS691) that I taught 
+at Loyola University of Chicago (LUC) in the last 3 years. 
+```{r}
+text0 <- readLines("GuderLUC691.txt")
+text0
+# text0: A character vector with 196 elements.
+
+# convert text0 to a character vector of one element (combine reviews)
+text <- paste(text0, collapse=" ") # combine all in one text
+text
+```
+
+(b) Create corpus
+corpus is a data structure (list) that is used by the "tm" package to process and analyze text data
+```{r}
+corpus <- Corpus(VectorSource(text)) # corpus is a list of 2 elements 
+inspect(corpus) # or corpus$content to display the content of corpus
+
+#result: the corpus has the same content as the text vector
+```
+
+#### Step 2. Clean Data (corpus)
+Purpose: to understand and analyze opinions and feelings of the customers and take actions accordingly. 
+Cleaning: removing data/words that do not reflect any opinions or feelings. 
+
+See the corpus (before cleaning)
+```{r}
+inspect(corpus)
+```
+
+To clean data in corpus, we will use tm_map() function
+available in "tm" package
+```{r}
+# convert the text to lower case 
+corpus <- tm_map(corpus, tolower)
+inspect(corpus) # to display the corpus 
+
+# remove english common stopwords (is, are, this, but, and, etc.)
+corpus <- tm_map(corpus, removeWords, stopwords("english"))
+inspect(corpus) # to display the corpus 
+
+# remove punctuation
+corpus <- tm_map(corpus, removePunctuation) #removes punctuation
+inspect(corpus) # to display the corpus 
+
+# remove additional words 
+#specified words: professor , guder, course, class
+corpus <- tm_map(corpus, removeWords, c("professor", "guder", "course", "class"))
+inspect(corpus) # to display the corpus
+
+# remove numbers 
+corpus <- tm_map(corpus, removeNumbers)
+inspect(corpus) 
+
+# Eliminate Whitespace
+corpus <- tm_map(corpus, stripWhitespace)
+inspect(corpus) # to display the corpus
+```
+
+#### Create TWO objects: "text2" and "words"
+    (These objects will be used in Step 4 - Text analysis)
+
+First object: text2
+(1) text2: split the clean text (corpus) into individual elements (words) and assigns them to the vector "text2".
+    "Bag of words". 
+```{r}
+text2 <- str_split(corpus$content, pattern ="\\s+") # text2 is a list
+text2 <- unlist(text2) #text2 is now a vector
+#inspect(corpus)
+text2
+#Display text2
+```
+
+Second Object: words 
+(2) words: the list of the words in text2 vector is
+      is expressed in a data frame structure. 
+```{r}
+words <- data.frame(word=text2)
+words
+```
+
+#### Step 3. Build a TermDocumentMatrix (tdm)
+Text mining processes transforms unstructured text into a structured format (into a table/matrix) 
+to identify meaningful patterns and new insights. 
+
+tdm turns the corpus into a document term matrix (structured data) 
+Create tdm and the following objects:
+tdm_m, tdm_s, and tdm_df
+```{r}
+tdm <-TermDocumentMatrix(corpus) # tdm is a list 
+tdm_m <- as.matrix(tdm) # change td to matrix
+tdm_m
+# order the tdm_m matrix by decreasing value of frequencies
+# and assign them to the vector "tdm_s"
+tdm_s <- sort(rowSums(tdm_m), decreasing=TRUE)
+tdm_s
+# tdm_s is a vector 
+# convert the tdm_s vector into a data frame format (tdm_df)
+# with the column names as follows:
+# column1 is named as 'word', column2 is named as 'freq'
+# This is needed only if you wanted to display wordcloud2 in step 4
+tdm_df <- data.frame(word = names(tdm_s), freq=tdm_s)
+tdm_df
+```
+
+#### Step 4. Analyze Text Data 
+(1) Visual Display of word frequencies using wordcloud 
+(2) Visual Display of word frequencies using barplot
+(3) Sentiment Analysis - calculate sentiments (customer opinions)
+
+#### (1) Display word frequencies using wordcloud
+```{r}
+# wordcloud (corpus)
+set.seed(123)        # to obtain the same display      
+wordcloud(corpus,    #clean corpus      
+         max.words=150,  # max number of words   
+         min.freq=1,     # words with the frequency below will not be plotted 
+         random.order=F, # the words displayed in random order  
+         color=rainbow(3),  # rainbow color option
+         scale=c(4.0,0.1),  # the range of the size of the words 
+         rot.per=0.30)      # proportion of the words to be rotated
+```
+
+Another package - wordcloud2
+Using wordcloud2
+```{r}
+set.seed(123)
+wordcloud2(tdm_df,
+           size=0.6,
+           color=rainbow(5),
+           shape="oval",
+           rotateRatio=0.3)
+```
+#### (2) Display word frequencies using a barplot 
+Display barplot for the top 15 most frequent words 
+```{r}
+# using the tdm_s: sorted tdms_s matrix 
+barplot(head(tdm_s,15),    # the object should be a (sorted) vector
+        las=2,
+        col=rainbow(50),
+        ylab="Frequency",
+        main= "Top 15 most frequently used words")
+```
+#### (3) Sentiment Analysis 
+# sentiment analysis = the process of determining whether a text is posituve, 
+# negative or neutral
+#### Sentiment Scores using "bing" lexicon, which categorizes words into 
+# positive and negative categories
+#### Read the lexicon by bing: list of positive and negative terms 
+
+Pull out only sentiment words.
+#### Read the sentiment words in the "bing" lexicon:
+```{r}
+bing <- get_sentiments(lexicon="bing") # from tidytext package 
+bing                                   # list of word in bing lexicon - 6786 words
+words                                  # list of (bag) words in clean opus - 
+                                       ## created in step 2
+```
+
+#### Determine the sentiment words in our text (corpus)
+```{r}
+text_bing <- inner_join(words, bing, by="word")
+text_bing   # list of all sentiment words in clean corpus
+```
+
+Separate the list of the positive an negative words
+```{r}
+poswords <- subset(text_bing, sentiment=="positive")
+negwords <- subset(text_bing, sentiment=="negative")
+poswords    # display the positive words
+negwords    # display the negative words 
+```
+
+Count the number of positive and negative
+and calculate the sentiment score for the text.
+```{r}
+countPos <- nrow(poswords)    # count the number of positive words 
+countNeg <- nrow(negwords)    # count the number of negative words 
+countPos 
+countNeg 
+
+# Calculate sentiment score (sentiment score = countPos - countNeg)
+result <- c(positive=countPos, negative=countNeg, sentimentsScore=countPos - countNeg)
+result
+```
+This sentiment score indicates a very strong positive review by the students
+
+### Note about the sentiment scores
+The # of positive and negative sentiments, and the sentiment score depends on the number of reviews. 
+
+The # of the positive and negative words tend to increase together for a longer review. Therefore, it might be helpful to use the ratios of positive and negative word counts if you are comparing the sentiment scores for 2 different products or services with different number of reviews (texts), it might be helpful to use the ratios of the number of positive and negative words. 
+
+### results review
+Degree of positivity/negativity = countPos/(countPos + countNeg)
+
+Degree of positive = 398/453 = 87.86%, meaning that 87.86% of the sentiment words
+in the reviews are positive. This is a high percenttage of positive words. 
+
+OR 
+
+Degree of positivity = countPos/countNeg
+
+Thsi ratio is an example equal to 398/55 = 7.24, meaning that the reviews in this example included 7.24
+positive words for each negative word. Again, this ratio indicates a very strong positive sentiment. 
+
+
+
+
+#### Create the html file and submit it on Sakai
+
+You need to create the html file: After completing your Rmd file,
+you will execute all the chunks, save the file, and generate the 
+html file containing the codes, outputs, and the answers. 
+
+To create the html file, complete the following steps:
+
+Step 1. (After writing all the codes) Execute all chunks one by one
+starting from the first chunk (regardless of  whether you executed 
+the codes while writing your codes).
+
+Step 2. Save your file->Save As…
+
+If you have completed Step 1, then Step 2 will save your Rmd file, 
+and (at the same time) it will create the html file on your working 
+directory. You will attach and submit this html file on Sakai as your homework8-Part1.
+
+Important: Please check the html file to make sure that it contains 
+           the R codes, outputs, and your answers. If not, repeat 
+           Step 1 and Step 2.
+
+
+
+#### Create the html file and submit it on Sakai
+
+You need to create the html file: After completing your Rmd file,
+you will execute all the chunks, save the file, and generate the 
+html file containing the codes, outputs, and the answers. 
+
+To create the html file, complete the following steps:
+
+Step 1. (After writing all the codes) Execute all chunks one by one
+starting from the first chunk (regardless of  whether you executed 
+the codes while writing your codes). 
+
+Step 2. Save your file->Save As…
+
+If you have completed Step 1, then Step 2 will save your Rmd file, 
+and (at the same time) it will create the html file on your working 
+directory. You will attach and submit this html file on Sakai as your homework8-Part1.
+
+Important: Please check the html file to make sure that it contains 
+           the R codes, outputs, and your answers. If not, repeat 
+           Step 1 and Step 2.
+           
